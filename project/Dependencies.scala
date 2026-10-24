@@ -13,7 +13,7 @@ object Dependencies:
     val scalajs    = "2.8.1"
     val laminar    = "17.0.0"
     val laminext   = "0.17.0"
-    val munit      = "1.2.4"
+    val munit      = "1.3.6"
     val sttpClient = "3.11.0"
 
   lazy val tapir = libraryDependencies ++= Seq(
