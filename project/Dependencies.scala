@@ -5,7 +5,7 @@ object Dependencies:
 
   object V:
 
-    val tapir      = "1.13.33"
+    val tapir      = "1.14.0"
     val circe      = "0.14.17"
     val cats       = "2.13.0"
     val slick      = "3.6.1"
