@@ -16,50 +16,57 @@ class CellFilterSuite extends FunSuite:
   private def flag(input: String) =
     CellFilter.parse("inPrint", Kind.Flag, input)
 
-  test("a blank cell matches everything"):
+  test("a blank cell matches everything, and absence is written for any kind"):
     assertEquals(text(""), Right(Filter.always))
     assertEquals(integer("  | "), Right(Filter.always))
-
-  test("text is sought by substring, spaces included"):
+    assertEquals(integer("?"), Right(Missing("rating")))
     assertEquals(
-      text("my book"),
-      Right(Contains("name", "my book")),
+      text("!?"),
+      Right(Not(Missing("name"))),
     )
 
-  test("text can be excluded, or matched exactly"):
-    assertEquals(
-      text("!edition"),
-      Right(Not(Contains("name", "edition"))),
-    )
-    assertEquals(
-      text("=Alpha"),
-      Right(Compare("name", Equal, Value.Text("Alpha"))),
-    )
-    assertEquals(
-      text("!=Alpha"),
-      Right(Compare("name", Unequal, Value.Text("Alpha"))),
-    )
-
-  test("alternatives match wherever any does"):
-    assertEquals(
-      text("alpha | beta"),
-      Right(Or(List(
+  test("text is sought by substring, excluded or matched exactly, or any"):
+    List(
+      "my book"      -> Contains("name", "my book"),
+      "!edition"     -> Not(Contains("name", "edition")),
+      "=Alpha"       -> Compare("name", Equal, Value.Text("Alpha")),
+      "!=Alpha"      -> Compare("name", Unequal, Value.Text("Alpha")),
+      "alpha | beta" -> Or(List(
         Contains("name", "alpha"),
         Contains("name", "beta"),
-      ))),
+      )),
+    ).foreach((input, filter) =>
+      assertEquals(text(input), Right(filter), input),
     )
 
-  test("a bare number is matched exactly"):
-    assertEquals(
-      integer("50"),
-      Right(Compare("rating", Equal, Value.Integer(50))),
+  test("a number is matched exactly, by an operator, in a range or by several"):
+    List(
+      "50"       -> Compare("rating", Equal, Value.Integer(50)),
+      "-5"       -> Compare("rating", Equal, Value.Integer(-5)),
+      ">=50 <80" -> And(List(
+        Compare("rating", AtLeast, Value.Integer(50)),
+        Compare("rating", Less, Value.Integer(80)),
+      )),
+      // A range is inclusive at both ends.
+      "50..80" -> And(List(
+        Compare("rating", AtLeast, Value.Integer(50)),
+        Compare("rating", AtMost, Value.Integer(80)),
+      )),
+      // An integer too large for a double is read exactly.
+      "9007199254740993" -> Compare(
+        "rating",
+        Equal,
+        Value.Integer(9007199254740993L),
+      ),
+      ">=9007199254740993" -> Compare(
+        "rating",
+        AtLeast,
+        Value.Integer(9007199254740993L),
+      ),
+    ).foreach((input, filter) =>
+      assertEquals(integer(input), Right(filter), input),
     )
-    assertEquals(
-      integer("-5"),
-      Right(Compare("rating", Equal, Value.Integer(-5))),
-    )
-
-  test("each operator is read by its longest symbol"):
+    // Each operator is read by its longest symbol.
     Operator
       .values
       .foreach(operator =>
@@ -68,65 +75,21 @@ class CellFilterSuite extends FunSuite:
           Right(Compare("rating", operator, Value.Integer(50))),
         ),
       )
-
-  test("conditions separated by spaces must all hold"):
-    assertEquals(
-      integer(">=50 <80"),
-      Right(And(List(
-        Compare("rating", AtLeast, Value.Integer(50)),
-        Compare("rating", Less, Value.Integer(80)),
-      ))),
-    )
-
-  test("a range is inclusive at both ends"):
-    assertEquals(
-      integer("50..80"),
-      Right(And(List(
-        Compare("rating", AtLeast, Value.Integer(50)),
-        Compare("rating", AtMost, Value.Integer(80)),
-      ))),
-    )
-
-  test("a range whose bounds are the wrong way round is refused"):
-    assert(integer("80..50").isLeft)
-    assert(real("1...2").isLeft)
-
-  test("a range missing a bound is refused"):
-    assert(integer("..80").isLeft)
-    assert(integer("50 .. 80").isLeft)
-
-  test("a number must be of the field's kind"):
-    assert(integer("50.5").isLeft)
-    assert(integer("abc").isLeft)
     assertEquals(
       real("50.5"),
       Right(Compare("score", Equal, Value.Real(50.5))),
     )
 
-  test("an integer too large for a double is read exactly"):
-    assertEquals(
-      integer("9007199254740993"),
-      Right(Compare(
-        "rating",
-        Equal,
-        Value.Integer(9007199254740993L),
-      )),
-    )
-    assertEquals(
-      integer(">=9007199254740993"),
-      Right(Compare(
-        "rating",
-        AtLeast,
-        Value.Integer(9007199254740993L),
-      )),
-    )
-
-  test("absence and presence are written the same way for any kind"):
-    assertEquals(integer("?"), Right(Missing("rating")))
-    assertEquals(
-      text("!?"),
-      Right(Not(Missing("name"))),
-    )
+  test("a backward or open range, or a value of another kind, is refused"):
+    List(
+      integer("80..50"),
+      real("1...2"),
+      integer("..80"),
+      integer("50 .. 80"),
+      integer("50.5"),
+      integer("abc"),
+      flag("maybe"),
+    ).foreach(parsed => assert(parsed.isLeft, parsed))
 
   test("truth values are read in several spellings"):
     assertEquals(
@@ -137,4 +100,3 @@ class CellFilterSuite extends FunSuite:
       flag("0"),
       Right(Compare("inPrint", Equal, Value.Flag(false))),
     )
-    assert(flag("maybe").isLeft)

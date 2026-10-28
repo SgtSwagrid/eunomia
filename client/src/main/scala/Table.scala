@@ -161,8 +161,8 @@ object Table:
         children <--
           list
             .items
-            .split(key)((id, _, item) =>
-              row(columns, id, item, select, selected),
+            .splitSeq(key)(item =>
+              row(columns, item.key, item, select, selected),
             ),
       ),
     ),

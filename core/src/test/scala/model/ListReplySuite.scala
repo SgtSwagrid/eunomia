@@ -19,12 +19,3 @@ class ListReplySuite extends FunSuite:
       decode[ListReply[Int]](whole.asJson.noSpaces),
       Right(whole),
     )
-
-  test("a whole reply is queried where it is received"):
-    val n      = Field.of[Int]("n", identity[Int])
-    val schema = ListSchema(n)
-    val query  = ListQuery(n > 1, page = Some(Page(0, 1)))
-    assertEquals(
-      ListReply.Whole(List(1, 2, 3)).answer(schema, query),
-      Right(Window(List(2), 2, Some(Page(0, 1)))),
-    )

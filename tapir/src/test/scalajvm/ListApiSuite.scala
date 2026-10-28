@@ -53,12 +53,14 @@ class ListApiSuite extends FunSuite:
       ask(query),
       Right(ListReply.Window(Window(List(4, 3), 4, Some(Page(1, 2))))),
     )
-
-  test("a query without a page is answered whole"):
     assertEquals(
       ask(ListQuery(n < 3)),
       Right(ListReply.Whole(List(1, 2))),
     )
+    val unreadable = basicRequest
+      .get(uri"http://test/numbers?filter=${ "{" }")
+      .send(backend)
+    assertEquals(unreadable.code, StatusCode.BadRequest)
 
   test("a reply is described as its codec writes it"):
     val keys = ListApi.reply[Int].codec.schema.schemaType match
@@ -72,9 +74,3 @@ class ListApiSuite extends FunSuite:
       keys,
       List(List("window"), List("whole")),
     )
-
-  test("a filter that cannot be read is refused"):
-    val answer = basicRequest
-      .get(uri"http://test/numbers?filter=${ "{" }")
-      .send(backend)
-    assertEquals(answer.code, StatusCode.BadRequest)

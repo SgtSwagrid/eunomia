@@ -11,8 +11,7 @@ object Dependencies:
     val slick      = "3.6.1"
     val h2         = "2.5.252"
     val scalajs    = "2.8.1"
-    val laminar    = "17.0.0"
-    val laminext   = "0.17.0"
+    val laminar    = "18.0.0-M5"
     val munit      = "1.3.6"
     val sttpClient = "3.11.0"
 
@@ -44,10 +43,7 @@ object Dependencies:
     Seq("org.scala-js" %% "scalajs-dom" % V.scalajs)
 
   lazy val laminar = libraryDependencies ++= Seq(
-    "com.raquo"   %% "laminar"     % V.laminar,
-    "io.laminext" %% "core"        % V.laminext,
-    "io.laminext" %% "fetch"       % V.laminext,
-    "io.laminext" %% "fetch-circe" % V.laminext,
+    "com.raquo" %% "laminar" % V.laminar,
   )
 
   lazy val munit = libraryDependencies ++=

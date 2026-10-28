@@ -8,7 +8,6 @@ import com.alecdorrington.eunomia.model.{
 import com.raquo.laminar.api.L.*
 import io.circe.{Decoder, Encoder}
 import io.circe.parser.decode
-import io.laminext.fetch.circe.*
 import org.scalajs.dom
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.scalajs.js.URIUtils.encodeURIComponent
@@ -166,7 +165,7 @@ object ListSource:
     : Signal[Either[String, Window[X]]] = EventStream
     .merge(
       EventStream.fromValue(()).sample(query).filter(_ != asked),
-      query.changes.debounce(debounce),
+      query.updates.debounce(debounce),
     )
     .flatMapSwitch(current =>
       send(current).map(_.flatMap(_.answer(schema, current))),
@@ -175,12 +174,10 @@ object ListSource:
 
   private def request[X : {Encoder, Decoder}]
     (url: String, query: ListQuery)
-    : EventStream[Either[String, ListReply[X]]] = Fetch
-    .get(address(url, query))
-    .text
-    .map(response =>
-      if response.status >= 400 then Left(response.data)
-      else decode[ListReply[X]](response.data).left.map(_.getMessage),
+    : EventStream[Either[String, ListReply[X]]] = Fetched(address(url, query))
+    .map((status, data) =>
+      if status >= 400 then Left(data)
+      else decode[ListReply[X]](data).left.map(_.getMessage),
     )
     .recover { case error => Some(Left(error.getMessage)) }
 

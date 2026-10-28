@@ -27,13 +27,11 @@ class SqlListsBindingSuite extends FunSuite:
       s"$clause holds `$value` itself.",
     )
 
-  test("a compared value is a parameter"):
+  test("every value compared, listed or sought is a parameter"):
     assertBound(
       where(rating.compare(_, Operator.AtLeast, Value.Integer(50L))),
       "50",
     )
-
-  test("each of several values is a parameter"):
     assertBound(
       where(rating.oneOf(
         _,
@@ -41,8 +39,6 @@ class SqlListsBindingSuite extends FunSuite:
       )),
       "45",
     )
-
-  test("sought text is a parameter"):
     assertBound(
       where(name.contains(_, "alpha")),
       "alpha",
