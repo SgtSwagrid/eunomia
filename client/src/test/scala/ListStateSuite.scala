@@ -40,19 +40,19 @@ class ListStateSuite extends FunSuite:
   private def names(list: ListState[Book]): List[String] =
     now(list.items).map(_.name)
 
-  test("a blank cell narrows nothing"):
+  test("text typed into cells filters by their fields together"):
     val list = state()
     assertEquals(now(list.filter), Filter.always)
     assertEquals(names(list), books.map(_.name))
-
-  test("text typed into a cell filters by that field"):
-    val list = state()
     list.typeInto("name", "a")
     assertEquals(now(list.filter), name.contains("a"))
     assertEquals(
       names(list),
       List("Alpha", "beta edition", "Gamma"),
     )
+    list.typeInto("rating", ">50")
+    assertEquals(names(list), List("Alpha"))
+    list.typeInto("rating", "")
     list.typeInto("name", "edition")
     assertEquals(names(list), List("beta edition"))
 
@@ -63,12 +63,6 @@ class ListStateSuite extends FunSuite:
     assertEquals(names(list), books.map(_.name))
     assert(now(list.cellProblem("rating")).isDefined)
     assertEquals(now(list.cellProblem("name")), None)
-
-  test("cells narrow the list together"):
-    val list = state()
-    list.typeInto("name", "a")
-    list.typeInto("rating", ">50")
-    assertEquals(names(list), List("Alpha"))
 
   test("the host's own filter is applied beneath what is typed"):
     val list = state(Val(rating.present))
@@ -112,7 +106,7 @@ class ListStateSuite extends FunSuite:
     val list    = state(initial = ListQuery(page = Some(Page(2, 1))))
     val changes = list
       .query
-      .changes
+      .updates
       .scanLeft(0)((count, _) => count + 1)
       .observe
     list.typeInto("name", "a")
@@ -122,12 +116,10 @@ class ListStateSuite extends FunSuite:
     assertEquals(now(list.query).page, Some(Page(0, 1)))
     assertEquals(changes.now(), 3)
 
-  test("a field the list has no column for is refused before typing"):
-    assert(now(state().cellProblem("author")).isDefined)
-    assertEquals(now(state().cellProblem("name")), None)
-
-  test("a field the list has no column for is refused"):
+  test("a field the list has no column for is refused, typed into or not"):
     val list = state()
+    assert(now(list.cellProblem("author")).isDefined)
+    assertEquals(now(list.cellProblem("name")), None)
     list.typeInto("author", "x")
     assert(now(list.cellProblem("author")).isDefined)
     assertEquals(now(list.filter), Filter.always)

@@ -172,13 +172,14 @@ class SqlListsSuite extends FunSuite:
     ),
   )
 
-  queries.foreach((label, query) =>
-    test(s"the database agrees with memory: $label"):
+  test("the database agrees with memory"):
+    val agreed = queries.map((label, query) =>
       val expected = schema.run(query, data).fold(fail(_), identity)
       val action   =
         lists.run(rows.sortBy(_.id), columns, query).fold(fail(_), identity)
-      db.run(action).map(assertEquals(_, expected)),
-  )
+      db.run(action).map(assertEquals(_, expected, label)),
+    )
+    Future.sequence(agreed).map(_ => ())
 
   test(
     "a query naming an unknown column is refused before reaching the database",
@@ -224,64 +225,61 @@ class SqlListsSuite extends FunSuite:
       lists.flag[Rows]("inPrint")(_.inPrint.?),
     ))
 
-  test("a short list is sent whole, in stored order, whatever was asked"):
+  test("a short list is sent whole, in stored order, and a longer one paged"):
     val query = ListQuery(rating > 50L, page = Some(Page(0, 1)))
-    answered(
-      SqlLists(H2Profile, wholeUpTo = data.size),
-      query,
-    ).map: reply =>
-      assertEquals(reply, ListReply.Whole(data))
+    for
+      whole <- answered(
+        SqlLists(H2Profile, wholeUpTo = data.size),
+        query,
+      )
+      // One row too long to be sent whole, it is paged instead.
+      paged <- answered(
+        SqlLists(H2Profile, wholeUpTo = data.size - 1),
+        ListQuery(),
+      )
+    yield
+      assertEquals(whole, ListReply.Whole(data))
       assertEquals(
-        reply.answer(schema, query),
+        whole.answer(schema, query),
         schema.run(query, data),
       )
-
-  test("a long list is sent only the page asked for, capped"):
-    answered(
-      SqlLists(H2Profile, wholeUpTo = 1, maxWindow = 2),
-      ListQuery(),
-    ).map(reply =>
       assertEquals(
-        reply,
+        paged,
+        ListReply.Window(Window(data, data.size, Some(Page(0, 100)))),
+      )
+      // The length of a list is decided from a bounded read.
+      val probe = SqlLists(H2Profile, wholeUpTo = 200)
+        .probe(rows.sortBy(_.id))
+        .result
+        .statements
+        .head
+      assert(probe.contains("limit 201"), probe)
+
+  test("a long list is sent only the page asked for, capped, saying which"):
+    val capped = SqlLists(H2Profile, wholeUpTo = 1, maxWindow = 2)
+    for
+      first    <- answered(capped, ListQuery())
+      narrowed <- answered(
+        capped,
+        ListQuery(page = Some(Page(1, 500))),
+      )
+    yield
+      assertEquals(
+        first,
         ListReply.Window(Window(
           data.take(2),
           data.size,
           Some(Page(0, 2)),
         )),
-      ),
-    )
-
-  test("a page narrowed by the server says which page it is"):
-    answered(
-      SqlLists(H2Profile, wholeUpTo = 1, maxWindow = 2),
-      ListQuery(page = Some(Page(1, 500))),
-    ).map(reply =>
+      )
       assertEquals(
-        reply,
+        narrowed,
         ListReply.Window(Window(
           data.slice(1, 3),
           data.size,
           Some(Page(1, 2)),
         )),
-      ),
-    )
-
-  test("the length of a list is decided from a bounded read"):
-    val sql = SqlLists(H2Profile, wholeUpTo = 200)
-      .probe(rows.sortBy(_.id))
-      .result
-      .statements
-      .head
-    assert(sql.contains("limit 201"), sql)
-
-  test("a list one row too long to be sent whole is paged instead"):
-    answered(
-      SqlLists(H2Profile, wholeUpTo = data.size - 1),
-      ListQuery(),
-    ).map(assertEquals(
-      _,
-      ListReply.Window(Window(data, data.size, Some(Page(0, 100)))),
-    ))
+      )
 
   test("a list drawn from a left join is queried by the joined columns"):
     val name   = Field.of[(Row, Option[Note])]("name", _._1.name)

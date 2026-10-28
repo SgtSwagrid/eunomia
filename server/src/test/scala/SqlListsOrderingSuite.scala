@@ -56,7 +56,7 @@ class SqlListsOrderingSuite extends FunSuite:
       descending,
     )
 
-  test("a profile with NULLS LAST is simply asked for it"):
+  test("absent values come last, by NULLS LAST or by sorting on absence"):
     check(
       H2Profile,
       """order by "rating" nulls last""",
@@ -67,8 +67,7 @@ class SqlListsOrderingSuite extends FunSuite:
       """order by "rating" nulls last""",
       """order by "rating" desc nulls last""",
     )
-
-  test("a profile without it sorts by absence first, descending aside"):
+    // Descending, absent values come last anyway.
     check(
       MySQLProfile,
       "order by isnull(`rating`),`rating`",

@@ -11,14 +11,14 @@ class ListParametersSuite extends FunSuite:
   private val name   = Field.of[Book]("name", _.name)
   private val rating = Field.of[Book]("rating", _.rating)
 
-  test("a query is written as parameters, omitting the defaults"):
+  test("a query is written as parameters, omitting defaults, and read back"):
     val query = ListQuery(
-      rating >= 50L,
+      name.contains("x") && rating >= 50L,
       List(rating.descending, name.ascending),
       Some(Page(20, 10)),
     )
     assertEquals(
-      ListParameters.of(query),
+      ListParameters.of(query.copy(filter = rating >= 50L)),
       List(
         "filter" -> """{"field":"rating","is":">=","value":50}""",
         "order"  -> "-rating,name",
@@ -27,20 +27,12 @@ class ListParametersSuite extends FunSuite:
       ),
     )
     assertEquals(
+      ListParameters.parse(ListParameters.of(query).toMap.get),
+      Right(query),
+    )
+    assertEquals(
       ListParameters.of(ListQuery()),
       List.empty,
-    )
-
-  test("parameters are read back into the query they were written from"):
-    val query = ListQuery(
-      name.contains("x") && rating >= 50L,
-      List(rating.descending, name.ascending),
-      Some(Page(20, 10)),
-    )
-    val parameters = ListParameters.of(query).toMap
-    assertEquals(
-      ListParameters.parse(parameters.get),
-      Right(query),
     )
     assertEquals(
       ListParameters.parse(_ => None),

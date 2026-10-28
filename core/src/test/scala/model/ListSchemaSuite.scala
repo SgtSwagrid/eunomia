@@ -31,7 +31,7 @@ class ListSchemaSuite extends FunSuite:
     .run(query, books)
     .map(_.items.map(_.name))
 
-  test("fields take their kind from the type they read, absent or not"):
+  test("fields take their kind from the type they read, and differ in name"):
     assertEquals(
       schema.kinds,
       Map(
@@ -41,27 +41,21 @@ class ListSchemaSuite extends FunSuite:
         "inPrint" -> Kind.Flag,
       ),
     )
-
-  test("a schema may not name two fields alike"):
     intercept[IllegalArgumentException](ListSchema(
       name,
       rating,
       Field.of[Book]("name", _.pages),
     ))
 
-  test("a comparison never holds for an absent value"):
+  test("a comparison never holds for an absent value, unless negated"):
     assertEquals(
       names(ListQuery(rating < 100L)),
       Right(List("Alpha", "beta", "Delta")),
     )
-
-  test("negating a comparison includes the absent values"):
     assertEquals(
       names(ListQuery(!(rating < 100L))),
       Right(List("Gamma")),
     )
-
-  test("absence is asked for explicitly"):
     assertEquals(
       names(ListQuery(rating.missing)),
       Right(List("Gamma")),
@@ -71,26 +65,38 @@ class ListSchemaSuite extends FunSuite:
       Right(3),
     )
 
-  test("text is sought ignoring case"):
+  test("text holds text whatever the case of either, anywhere in it"):
     assertEquals(
       names(ListQuery(name.contains("ALPH"))),
       Right(List("Alpha")),
     )
+    assertEquals(
+      names(ListQuery(name.contains("ELT"))),
+      Right(List("Delta")),
+    )
+    assertEquals(
+      names(ListQuery(name.contains("a"))).map(_.size),
+      Right(4),
+    )
+    assertEquals(
+      names(ListQuery(name.contains(""))).map(_.size),
+      Right(4),
+    )
+    assertEquals(
+      names(ListQuery(name.contains("Alphabet"))),
+      Right(Nil),
+    )
 
-  test("filters compose"):
+  test("filters compose, and an empty disjunction holds nowhere"):
     val query = ListQuery((inPrint.is(true) && rating > 80L) || pages >= 800)
     assertEquals(
       names(query),
       Right(List("Gamma", "Delta")),
     )
-
-  test("one of several values"):
     assertEquals(
       names(ListQuery(rating.oneOf(45L, 90L))),
       Right(List("beta", "Delta")),
     )
-
-  test("an empty conjunction holds everywhere, an empty disjunction nowhere"):
     assertEquals(
       names(ListQuery(Filter.always)).map(_.size),
       Right(4),
@@ -100,7 +106,11 @@ class ListSchemaSuite extends FunSuite:
       Right(List.empty),
     )
 
-  test("absent values come last in either direction"):
+  test("later keys break the ties of earlier ones, absent values last"):
+    assertEquals(
+      names(ListQuery(order = List(inPrint.descending, name.ascending))),
+      Right(List("Alpha", "Delta", "Gamma", "beta")),
+    )
     assertEquals(
       names(ListQuery(order = List(rating.ascending))),
       Right(List("beta", "Alpha", "Delta", "Gamma")),
@@ -110,13 +120,7 @@ class ListSchemaSuite extends FunSuite:
       Right(List("Delta", "Alpha", "beta", "Gamma")),
     )
 
-  test("later keys break the ties of earlier ones"):
-    assertEquals(
-      names(ListQuery(order = List(inPrint.descending, name.ascending))),
-      Right(List("Alpha", "Delta", "Gamma", "beta")),
-    )
-
-  test("a page selects a window, and the total counts every match"):
+  test("a page selects a window, however large, and the total counts all"):
     val query = ListQuery(
       order = List(name.ascending),
       page = Some(Page(1, 2)),
@@ -130,6 +134,10 @@ class ListSchemaSuite extends FunSuite:
     assertEquals(
       window.map(_.page),
       Right(Some(Page(1, 2))),
+    )
+    assertEquals(
+      names(ListQuery(page = Some(Page(1, Int.MaxValue)))),
+      Right(List("beta", "Gamma", "Delta")),
     )
 
   test("a page starting past the end is the last that holds anything"):
@@ -161,9 +169,11 @@ class ListSchemaSuite extends FunSuite:
       Right(Some(Page(0, 3))),
     )
 
-  test("an unknown field is refused"):
+  test("an unknown field or a malformed page is refused"):
     assert(names(ListQuery(Filter.Missing("author"))).isLeft)
     assert(names(ListQuery(order = List(Order("author")))).isLeft)
+    assert(names(ListQuery(page = Some(Page(-1, 10)))).isLeft)
+    assert(names(ListQuery(page = Some(Page(0, 0)))).isLeft)
 
   test("a value is converted to the kind of its field, when it can be"):
     val whole = Filter.Compare(
@@ -181,27 +191,9 @@ class ListSchemaSuite extends FunSuite:
       Right(List("beta")),
     )
     assert(names(ListQuery(half)).isLeft)
-
-  test("text is sought only in text fields"):
     assert(names(ListQuery(Filter.Contains("rating", "4"))).isLeft)
 
-  test("a malformed page is refused"):
-    assert(names(ListQuery(page = Some(Page(-1, 10)))).isLeft)
-    assert(names(ListQuery(page = Some(Page(0, 0)))).isLeft)
-
-  test("a page however large holds every item from its offset on"):
-    assertEquals(
-      names(ListQuery(page = Some(Page(1, Int.MaxValue)))),
-      Right(List("beta", "Gamma", "Delta")),
-    )
-
-  test("the page after a huge one stops at the largest offset"):
-    assertEquals(
-      Page(1, Int.MaxValue).next,
-      Page(Int.MaxValue, Int.MaxValue),
-    )
-
-  test("a limit caps the page, and an unpaged query gets the first"):
+  test("a limit caps the page, and the page after a huge one cannot overflow"):
     assertEquals(
       ListQuery().capped(50).page,
       Some(Page(0, 50)),
@@ -209,6 +201,10 @@ class ListSchemaSuite extends FunSuite:
     assertEquals(
       ListQuery(page = Some(Page(10, 500))).capped(50).page,
       Some(Page(10, 50)),
+    )
+    assertEquals(
+      Page(1, Int.MaxValue).next,
+      Page(Int.MaxValue, Int.MaxValue),
     )
 
   test("composing flattens rather than nesting"):
@@ -220,7 +216,7 @@ class ListSchemaSuite extends FunSuite:
     assertEquals(Filter.always && a, a)
     assertEquals(!(!a), a)
 
-  test("a heading cycles its field through ascending, descending and off"):
+  test("a heading cycles its field, first of the keys, through each direction"):
     val ascending = Order.toggled(List(Order("name")), "rating")
     assertEquals(
       ascending,
@@ -238,8 +234,7 @@ class ListSchemaSuite extends FunSuite:
       Order.toggled(descending, "rating"),
       List(Order("name")),
     )
-
-  test("a secondary key clicked becomes the primary one"):
+    // A secondary key clicked becomes the primary one.
     assertEquals(
       Order.toggled(
         List(
@@ -258,21 +253,3 @@ class ListSchemaSuite extends FunSuite:
     )
     assertEquals(Order.textOf(keys), "-rating,name")
     assertEquals(Order.parseAll("-rating, name,"), keys)
-
-  test("text holds text whatever the case of either, anywhere in it"):
-    assertEquals(
-      names(ListQuery(name.contains("ELT"))),
-      Right(List("Delta")),
-    )
-    assertEquals(
-      names(ListQuery(name.contains("a"))).map(_.size),
-      Right(4),
-    )
-    assertEquals(
-      names(ListQuery(name.contains(""))).map(_.size),
-      Right(4),
-    )
-    assertEquals(
-      names(ListQuery(name.contains("Alphabet"))),
-      Right(Nil),
-    )

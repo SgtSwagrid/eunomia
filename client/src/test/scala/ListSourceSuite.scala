@@ -105,12 +105,10 @@ class ListSourceSuite extends FunSuite:
     setTimeout(settling * 5.0)(done.success(()))
     done.future
 
-  test("the first request carries the query as it stands"):
-    serving: server =>
-      Future(assertEquals(server.asked, List(server.query)))
-
   test("a query changed during the first request is sent once that answers"):
     serving: server =>
+      // The first request carries the query as it stands.
+      assertEquals(server.asked, List(server.query))
       server.list.typeInto("name", "edition")
       settled().map: _ =>
         server.window()

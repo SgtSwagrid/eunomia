@@ -26,7 +26,8 @@ in a database or over the wire, for full stack websites built on Slick and Lamin
   nothing in `core` or `client` may use `java.util.Locale` or `java.time`, which Scala.js lacks without a library.
   `ListSchema.contains` folds case with `regionMatches` for this reason, and the default-locale test is JVM only
   (`core/src/test/scalajvm`). A missing class shows only when JS is linked, as in `eunomiaCoreJS/test`.
-- `client` (`com.alecdorrington.eunomia.client`) - `ListSource`, `ListState` and an unstyled `Table`.
+- `client` (`com.alecdorrington.eunomia.client`) - `ListSource`, `ListState` and an unstyled `Table`. A server's
+  list is read with the private `Fetched`, on the browser's `fetch`, as laminext has no release for Laminar 18.
   `ListSource` was named `Source` once and clashed with Laminar's `L.*`; don't reintroduce that.
   An endpoint's list is reloaded by its `reloads` stream (the host says when, as nothing here sees writes),
   keeping the rows on screen until the answer arrives; `ListSource.reshown` reloads when the page is looked
@@ -36,7 +37,7 @@ in a database or over the wire, for full stack websites built on Slick and Lamin
   without feedback state, so a short list would send a request per query. A page starting past the end
   of a list is answered with the last that holds anything (`Page.within`), by `ListSchema.run` and `SqlLists`
   alike, so that a list shrinking under its reader never leaves them on an empty page; keep the two
-  paths agreeing (the agreement tests in `SqlListsSuite`).
+  paths agreeing (the agreement test in `SqlListsSuite`).
 
 See [README.md](README.md) for how a host wires it up.
 
