@@ -59,6 +59,9 @@ other than `plugins-scalajs.sbt`) comes from further upstream still, in
 - Each matrix pins `sourceDirectory` to `(ThisBuild / baseDirectory) / "<module>" / "src"`. Don't remove it: sbt 2.0.8
   resolves a matrix's sources against the working directory, which is the host's when the build is included by reference,
   and the library then compiles to an empty JAR without a single error of its own.
+- The matrices' sources sit in their packages' directories (`core/src/main/scala/com/alecdorrington/eunomia/`), with no
+  `packagePrefix`: IntelliJ's sbt import never gives a prefix to the module holding the sources the JVM and JS share,
+  so every `package` line there was flagged on each fresh import.
 - The library must never depend on anything in the project that includes it, and nothing here should assume a host, a database or a JDBC profile.
 - Versions come from git tags (`sbt-ci-release`); publishing a GitHub release publishes to Maven Central.
 
