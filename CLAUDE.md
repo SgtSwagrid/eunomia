@@ -12,7 +12,7 @@ Keep it concise and actionable.
 ## Project overview
 
 This is Eunomia, a Scala 3 library for filtering, ordering and paging lists of items, whether in memory,
-in a database or over the wire, for full stack websites built on Slick and Laminar, and optionally Tapir. It is in beta.
+in a database or over the wire, for full stack websites built on Slick and Laminar, and optionally Tapir. It is still a prototype.
 
 - `core` (`com.alecdorrington.eunomia`, JVM + JS) - `model/ListQuery`, `Filter`, `Order`, `Page`, `ListSchema` for
   in-memory evaluation, `ListReply` as either the whole list or one `Window`, and `api/ListParameters`, a query as the parameters of a
@@ -71,9 +71,10 @@ it only through a release (below).
 
 ### Releases
 
-1. Land the changes on `main` by pull request, the last of them setting the README's installation lines to the new
-   version. Eunomia is in beta, versioned by early semver (`versionScheme`): while it is `0.x`, the minor version goes
-   up for any change that can break a user's build or behaviour, and the patch version for anything else.
+1. Land the changes on `main` by pull request. The README's installation lines name no version (they read
+   `{version}`, pointing to the latest release), so a release leaves them as they are. Eunomia is still a prototype,
+   versioned by early semver (`versionScheme`): while it is `0.x`, the minor version goes up for any change that can
+   break a user's build or behaviour, and the patch version for anything else.
 2. Publish a GitHub release of `main` tagged `v<version>`, with notes written for a user, as the earlier releases' are
    (the installation lines, then what is Changed, Added and Fixed). `publish.yml` then publishes
    `eunomia-core` and `eunomia-tapir` (each for the JVM and JS), `eunomia-server` and `eunomia-client` to Maven Central through `sbt-ci-release`, which takes the version from the tag, and `docs.yml`
