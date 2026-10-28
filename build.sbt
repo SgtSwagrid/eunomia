@@ -21,11 +21,13 @@ ThisBuild / scalacOptions ++= Seq(
 
 val projectRoot = "com.alecdorrington.eunomia"
 
+// The matrices' sources sit in their packages' directories rather than under a
+// package prefix, as IntelliJ never gives one to the sources the JVM and JS
+// share.
 lazy val eunomiaCore = projectMatrix
   .in(file("core"))
   .settings(
-    name          := "eunomia-core",
-    packagePrefix := projectRoot,
+    name := "eunomia-core",
 
     // A matrix resolves its sources against the working directory, which is
     // not this build's own when a host includes it by reference.
@@ -41,8 +43,7 @@ lazy val eunomiaTapir = projectMatrix
   .in(file("tapir"))
   .dependsOn(eunomiaCore)
   .settings(
-    name          := "eunomia-tapir",
-    packagePrefix := s"$projectRoot.tapir",
+    name := "eunomia-tapir",
 
     // Pinned to this build's own base, as for the core.
     sourceDirectory := (ThisBuild / baseDirectory).value / "tapir" / "src",
