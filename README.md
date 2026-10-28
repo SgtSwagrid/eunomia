@@ -12,7 +12,7 @@
 </div>
 
 > [!WARNING]
-> Eunomia is in beta. It is young, it has one user, and anything may change between minor versions.
+> Eunomia is still a prototype. Anything could be broken or change between minor versions.
 
 A library for lists that people filter, order and page, whether the list is a
 handful of items or far too many to send to a browser, plus a [Laminar](https://laminar.dev/) table whose header row
@@ -22,15 +22,20 @@ Named for [Eunomia](https://en.wikipedia.org/wiki/Eunomia), goddess of good orde
 
 ## ⬇️ Installation
 
-Add whichever halves you need to your `build.sbt`:
+There are several components which can be installed separately, but the same version number (e.g. [latest](../../releases/latest)) must be used across all of them.
+The following applies for [Scala 3](https://www.scala-lang.org/) projects built with [sbt 2](https://www.scala-sbt.org/).
+Add the desired components to your `build.sbt` file:
 
 ```scala
-libraryDependencies += "com.alecdorrington" %% "eunomia-server" % "0.2.0" // On the JVM.
-libraryDependencies += "com.alecdorrington" %% "eunomia-client" % "0.2.0" // In the browser.
-libraryDependencies += "com.alecdorrington" %% "eunomia-tapir"  % "0.2.0" // With Tapir, on either.
-```
+// Server, on the JVM
+libraryDependencies += "com.alecdorrington" %% "eunomia-server" % "{version}"
 
-Compiled with Scala `3.9.0`, with no intention to explicitly support older versions.
+// Client, in the browser
+libraryDependencies += "com.alecdorrington" %% "eunomia-client" % "{version}"
+
+// Tapir endpoints, on either
+libraryDependencies += "com.alecdorrington" %% "eunomia-tapir" % "{version}"
+```
 
 ## 🏯 Layout
 
