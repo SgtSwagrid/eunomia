@@ -5,7 +5,7 @@ object Dependencies:
 
   object V:
 
-    val tapir      = "1.14.0"
+    val tapir      = "1.14.1"
     val circe      = "0.14.17"
     val cats       = "2.13.0"
     val slick      = "3.6.1"
@@ -42,9 +42,8 @@ object Dependencies:
   lazy val scalajs = libraryDependencies ++=
     Seq("org.scala-js" %% "scalajs-dom" % V.scalajs)
 
-  lazy val laminar = libraryDependencies ++= Seq(
-    "com.raquo" %% "laminar" % V.laminar,
-  )
+  lazy val laminar = libraryDependencies ++=
+    Seq("com.raquo" %% "laminar" % V.laminar)
 
   lazy val munit = libraryDependencies ++=
     Seq("org.scalameta" %% "munit" % V.munit % Test)
