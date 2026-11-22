@@ -63,3 +63,33 @@ class FilterSuite extends FunSuite:
     )
     assert(decode[Filter]("""{"xor":[]}""").isLeft)
     assert(decode[Filter]("""{"field":"rating","is":"~","value":1}""").isLeft)
+
+  private final case class Novel(title: String, author: String)
+
+  private val title  = Field.of[Novel]("title", _.title)
+  private val author = Field.of[Novel]("author", _.author)
+
+  test("a search seeks every word in any of its fields, in any order"):
+    def sought(word: String) = Filter.Or(List(
+      Filter.Contains("title", word),
+      Filter.Contains("author", word),
+    ))
+    assertEquals(
+      Filter.search(" Brontë  wuthering ", title, author),
+      Filter.And(List(sought("Brontë"), sought("wuthering"))),
+    )
+    val found = ListSchema(title, author).matches(
+      Filter.search("emily HEIGHTS", title, author),
+    )
+    assert(found(Novel("Wuthering Heights", "Emily Brontë")))
+    assert(!found(Novel("Jane Eyre", "Charlotte Brontë")))
+
+  test("a search parts words at any space, and without any holds everywhere"):
+    assertEquals(
+      Filter.search(" \t\n ", title, author),
+      Filter.always,
+    )
+    assertEquals(
+      Filter.search("a\u3000b\u00a0a", title),
+      Filter.search("a b", title),
+    )

@@ -179,6 +179,8 @@ The rules of thumb this encodes, for anyone tuning the thresholds:
 A person filters one column at a time, typing into its header cell. `CellFilter` reads that text
 against the column's kind: `novel`, `!edition`, `=Alpha` for text; `>=50 <80`, `50..80`, `!=0` for
 numbers; `yes`/`no` for truth values; `?` or `!?` for absence and presence; `|` between alternatives.
+A search box seeks its words across several text fields instead: `Filter.search(text, title, author)`
+holds wherever each word typed, in any order, is found in one of them, ignoring case.
 Queries built in code compose the same way: `(rating >= 50L && !name.contains("edition")) || rating.missing`.
 
 ## 🤝 Contributing

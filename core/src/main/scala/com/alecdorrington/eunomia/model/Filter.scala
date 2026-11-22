@@ -219,6 +219,41 @@ object Filter:
     Or(_),
   )
 
+  /**
+    * Creates the filter a search box types: each word of the text, as spaces
+    * part them, must be contained in at least one of the fields, ignoring case.
+    * The words may come in any order, and need not all be in one field.
+    *
+    * @tparam X
+    *   The type of the items.
+    *
+    * @param text
+    *   The text typed.
+    *
+    * @param fields
+    *   The text fields searched.
+    *
+    * @return
+    *   A filter holding wherever every word is found, or everywhere if the text
+    *   holds no word.
+    */
+  def search[X](text: String, fields: Field[X, String]*): Filter =
+    all(words(text).map(word => any(fields.map(_.contains(word)))))
+
+  /**
+    * Parts text at every kind of space, including the ideographic space that
+    * Chinese and Japanese input types.
+    */
+  private def words(text: String): List[String] = text
+    .map(char => if spacing(char) then ' ' else char)
+    .split(' ')
+    .filter(_.nonEmpty)
+    .distinct
+    .toList
+
+  private def spacing(char: Char): Boolean = Character.isWhitespace(char) ||
+    Character.isSpaceChar(char)
+
   private def conjuncts(filter: Filter): List[Filter] = filter match
     case And(inner) => inner
     case _          => List(filter)
